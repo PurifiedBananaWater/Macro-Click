@@ -440,10 +440,6 @@ class MacroClickGUI:
             else:
                 if key == self.click_thread.key:
                     self.click_thread.running = not self.click_thread.running
-
-            
-
-            print("Pressed")
             
         except:
             try:
