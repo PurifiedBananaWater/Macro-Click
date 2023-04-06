@@ -1,5 +1,5 @@
 # Macro-Click
- A autoclicker/macro creation program with a GUI.
+ An autoclicker/macro creation program with a GUI.
 
  This program may be useful for someone wanting to auto run a task in a game that is repetetive.
  
