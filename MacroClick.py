@@ -307,8 +307,6 @@ class MacroClickGUI:
                             pass
                     
                         i += 1
-                        print(i)
-
 
                     self.master.after(1, self.run)
                     
