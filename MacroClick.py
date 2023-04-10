@@ -163,7 +163,6 @@ class MacroClickGUI:
 
     class AutoClicker:
         def __init__(self, delay, button, key, master):
-            super().__init__()
             self.master = master
             self.delay = delay
             self.button = button
@@ -191,7 +190,6 @@ class MacroClickGUI:
 
     class MacroExecuter:
         def __init__(self, key, command_types, command_vals, master):
-            super().__init__()
             self.master = master
             self.key = key
             self.command_types = command_types
