@@ -5,6 +5,7 @@ import ctypes
 import keyboard
 import csv
 import os
+from sys import exit
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
 import pydirectinput
@@ -252,10 +253,10 @@ class MacroClickGUI:
                             if self.command_vals[i + 1] == '1': # Press
                                 keyb.press_key(key_hexcode)
                                 time.sleep(0.0001)
-                            elif self.command_vals[i + 2] == '1': # Release
+                            elif self.command_vals[i + 2] == '2': # Release
                                 keyb.release_key(key_hexcode)
                                 time.sleep(0.0001)
-                            elif self.command_vals[i + 3] == '1': # Click
+                            elif self.command_vals[i + 3] == '3': # Click
                                 keyb.click_key(key_hexcode)
                             
                                 
@@ -305,6 +306,8 @@ class MacroClickGUI:
                             pass
                     
                         i += 1
+                        
+
 
                     self.master.after(1, self.run)
                     
@@ -510,15 +513,16 @@ class MacroClickGUI:
                 break
         self.display_frame.pack()
 
+
+    def radio_used(self, selection):
+        print(selection.get())
+
     # Function that adds a key input section
     def add_key_text_box(self, key_button):
         if self.command_row == 0:
             self.command_row = key_button.grid_info()['row']
-        
-        press_var = tk.IntVar()
-        release_var = tk.IntVar()
-        click_var = tk.IntVar()
 
+        selection = tk.IntVar()
 
         for command_section in self.command_boxes:
             if command_section[1] == key_button:
@@ -526,17 +530,17 @@ class MacroClickGUI:
                 key_text_box.grid(row=self.command_row, column=0, sticky='ew', pady=5)
                 key_text_box.insert(0, "Keyboard key")
 
-                key_press = tk.Checkbutton(self.display_frame, text="Press", variable=press_var)
+                key_press = tk.Radiobutton(self.display_frame, text="Press", variable=selection, value=1)
                 key_press.grid(row=self.command_row, column=1, sticky='w')
 
                 self.command_row += 1
 
-                key_release = tk.Checkbutton(self.display_frame, text="Release", variable=release_var)
+                key_release = tk.Radiobutton(self.display_frame, text="Release", variable=selection, value=2)
                 key_release.grid(row=self.command_row, column=1, sticky='w')
 
                 self.command_row += 1
 
-                key_click = tk.Checkbutton(self.display_frame, text="Click", variable=click_var)
+                key_click = tk.Radiobutton(self.display_frame, text="Click", variable=selection, value=3)
                 key_click.grid(row=self.command_row, column=1, sticky='w')
                 self.command_row += 1
 
@@ -549,9 +553,9 @@ class MacroClickGUI:
                 self.command_types.append('key_release')
                 self.command_types.append('key_click')
                 self.command_vars.append(key_text_box)
-                self.command_vars.append(press_var)
-                self.command_vars.append(release_var)
-                self.command_vars.append(click_var)
+                self.command_vars.append(selection)
+                self.command_vars.append(selection)
+                self.command_vars.append(selection)
                 break
         self.display_frame.pack()
 
@@ -564,6 +568,8 @@ class MacroClickGUI:
         release_var = tk.IntVar()
         click_var = tk.IntVar()
         button_var = tk.IntVar()
+
+        
 
 
         for command_section in self.command_boxes:
@@ -685,7 +691,7 @@ class MacroClickGUI:
 
 # Function to make sure the entire program is exited on close
 def quit_after_window_closed():
-    quit()
+    exit()
 
 
 window = tk.Tk()
