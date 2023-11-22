@@ -5,6 +5,7 @@ import ctypes
 import keyboard
 import csv
 import os
+import re
 from sys import exit
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
@@ -206,7 +207,6 @@ class MacroClickGUI:
             
         def run(self):
             try:
-                
                 if self.running:
                     keyb = Keyboard()
                     mouse_mover = MouseMover()
@@ -216,90 +216,90 @@ class MacroClickGUI:
                             delay = float(self.command_vals[i])
                             time.sleep(delay)
                         elif elem == 'key_text':
-                            key = str(self.command_vals[i])
+                            key = str(self.command_vals[i][1])
                             if len(key) > 1:
-                                if key == 'up' or key == 'Up' or key == 'UP':
+                                if key == 'up':
                                     key_hexcode = keyb.UP
-                                elif key == 'down' or key == 'Down' or key == 'DOWN':
+                                elif key == 'down':
                                     key_hexcode = keyb.DOWN
-                                elif key == 'right' or key == 'Right' or key == 'RIGHT':
+                                elif key == 'right':
                                     key_hexcode = keyb.RIGHT
-                                elif key == 'left' or key == 'Left' or key == 'LEFT':
+                                elif key == 'left':
                                     key_hexcode = keyb.LEFT
-                                elif key == 'esc' or key == 'Esc' or key == 'ESC':
+                                elif key == 'esc':
                                     key_hexcode = keyb.ESC
-                                elif key == 'tab' or key == 'Tab' or key == 'TAB':
+                                elif key == 'tab':
                                     key_hexcode = keyb.TAB
-                                elif key == 'l shift' or key == 'left shift' or key == 'L shift' or key == 'L Shift' or key == 'L SHIFT' or key == 'LEFT SHIFT' or key == 'Left Shift':
+                                elif key == 'l_shift':
                                     key_hexcode = keyb.LEFT_SHIFT
-                                elif key == 'r shift' or key == 'right shift' or key == 'R shift' or key == 'R Shift' or key == 'R SHIFT' or key == 'RIGHT SHIFT' or key == 'Right Shift':
+                                elif key == 'r_shift':
                                     key_hexcode = keyb.RIGHT_SHIFT
-                                elif key == 'l control' or key == 'left control' or key == 'L control' or key == 'L Control' or key == 'L CONTROL' or key == 'LEFT CONTROL' or key == 'Left Control' or key == 'ctrl' or key == 'l ctrl' or key == 'L CTRL':
+                                elif key == 'l_control':
                                     key_hexcode = keyb.LEFT_CONTROL
-                                elif key == 'r control' or key == 'right control' or key == 'R control' or key == 'R Control' or key == 'R CONTROL' or key == 'RIGHT CONTROL' or key == 'Right Control' or key == 'r ctrl' or key == 'R CTRL':
+                                elif key == 'r_control':
                                     key_hexcode = keyb.RIGHT_CONTROL
-                                elif key == 'backspace' or key == 'BACKSPACE' or key == 'bckspc' or key == 'back' or key == 'BACK':
+                                elif key == 'backspace':
                                     key_hexcode = keyb.BACKSPACE
-                                elif key == 'enter' or key == 'return' or key == 'entr' or key == 'ENTER' or key == 'RETURN' or key == 'ENTR' or key == 'Enter' or key == 'Return':
+                                elif key == 'enter':
                                     key_hexcode = keyb.ENTER
-                                elif key == 'l alt' or key == 'left alt' or key == 'alt' or key == 'L Alt' or key == 'L ALT' or key == 'ALT':
+                                elif key == 'l_alt':
                                     key_hexcode = keyb.LEFT_ALT
-                                elif key == 'space' or key == 'Space' or key == 'SPACE' or key == 'spc':
+                                elif key == 'space':
                                     key_hexcode = keyb.SPACE
                                 else:
                                     key_hexcode = keyb.Z
                             else:
                                 key_hexcode = keyboard.key_to_scan_codes(key)[0]
-                            if self.command_vals[i + 1] == '1': # Press
+                            if self.command_vals[i][0] == 'press': # Press
                                 keyb.press_key(key_hexcode)
                                 time.sleep(0.0001)
-                            elif self.command_vals[i + 2] == '2': # Release
+                            elif self.command_vals[i][0] == 'release': # Release
                                 keyb.release_key(key_hexcode)
                                 time.sleep(0.0001)
-                            elif self.command_vals[i + 3] == '3': # Click
+                            elif self.command_vals[i][0] == 'click': # Click
                                 keyb.click_key(key_hexcode)
                             
                                 
                         elif elem == 'mouse_press':
-                            if self.command_vals[i] == '1':
-                                if self.command_vals[i - 1] == '1':
+                            if self.command_vals[i][0] == 'press':
+                                if self.command_vals[i][1] == 'right':
                                     self.mouse.press(Button.right)
                                 else:
                                     self.mouse.press(Button.left)
                         elif elem == 'mouse_release':
-                            if self.command_vals[i] == '1':
-                                if self.command_vals[i - 3] == '1':
+                            if self.command_vals[i][0] == 'release':
+                                if self.command_vals[i][1] == 'right':
                                     self.mouse.release(Button.right)
                                 else:
                                     self.mouse.release(Button.left)
                         elif elem == 'mouse_click':
-                            if self.command_vals[i] == '1':
-                                if self.command_vals[i - 4] == '1':
+                            if self.command_vals[i][0] == 'click':
+                                if self.command_vals[i][1] == 'right':
                                     self.mouse.click(Button.right)
                                 else:
                                     self.mouse.click(Button.left)
                         elif elem == 'mouse_text':
                             move_mouse = self.command_vals[i]
-                            if move_mouse[0:2] == 'Up' or move_mouse[0:2] == 'up' or move_mouse[0:2] == 'UP':
-                                pixels = - int(move_mouse[3:-1])
+                            if move_mouse[0] == 'up':
+                                pixels = - int(move_mouse[1])
                                 mouse_mover.move_mouse_up(pixels)
-                            elif move_mouse[0:4] == 'Down' or move_mouse[0:4] == 'down' or move_mouse[0:4] == 'DOWN':
-                                pixels = int(move_mouse[5:-1])
+                            elif move_mouse[0] == 'down':
+                                pixels = int(move_mouse[1])
                                 mouse_mover.move_mouse_up(pixels)
-                            elif move_mouse[0:4] == 'Left' or move_mouse[0:4] == 'left' or move_mouse[0:4] == 'LEFT':
-                                pixels = - int(move_mouse[5:-1])
+                            elif move_mouse[0] == 'left':
+                                pixels = - int(move_mouse[1])
                                 mouse_mover.move_mouse_right(pixels)
-                            elif move_mouse[0:5] == 'Right' or move_mouse[0:5] == 'right' or move_mouse[0:5] == 'RIGHT':
-                                pixels = int(move_mouse[6:-1])
+                            elif move_mouse[0] == 'right':
+                                pixels = int(move_mouse[1])
                                 mouse_mover.move_mouse_right(pixels)
-                            elif move_mouse[0:2] == 'To' or move_mouse[0:2] == 'to' or move_mouse[0:2] == 'TO':
+                            elif move_mouse[0] == 'to':
                                 index = 0
                                 for l in move_mouse:
                                     if l == ',':
                                         break
                                     index += 1
-                                pixels_x = int(move_mouse[3:index])
-                                pixels_y = int(move_mouse[(index + 1):-1])
+                                pixels_x = int(move_mouse[1])
+                                pixels_y = int(move_mouse[2])
                                 mouse_mover.move_mouse_to(pixels_x, pixels_y)
 
                         else:
@@ -327,80 +327,213 @@ class MacroClickGUI:
 
         self.display_frame = tk.Frame(self.master)
 
-        delay_text_box = tk.Entry(self.display_frame)
-        delay_text_box.insert(0, "Delay Between Clicks")
+        self.natural_lang_text_box = tk.Text(self.display_frame)
+        self.natural_lang_text_box.insert("1.0", "[start_key z] [delay 1] [click mouse]")
+        self.natural_lang_text_box.grid(row=0, column=0)
+        nl_update_button = tk.Button(self.display_frame, text="Update Command", bg='steelblue1', command=lambda: self.update_nl(str(self.natural_lang_text_box.get("1.0", tk.END))))
+        nl_update_button.grid(row=1, column=0, sticky='n')
 
-        strt_stp_text_box = tk.Entry(self.display_frame)
-        strt_stp_text_box.insert(0, "Which key you press to start the auto click (default is z)")
 
-        delay_text_box.grid(row=0, column=0)
-        strt_stp_text_box.grid(row=1, column=0)
-
-        rightclick_bool = tk.IntVar()
-        r_click_button = tk.Checkbutton(self.display_frame, text="Right Click", variable=rightclick_bool)
-        r_click_button.grid(row=0, column=1)
-
-        auto_button = tk.Button(self.display_frame, text="Autoclick", command=lambda: self.autoclick(delay_text_box, rightclick_bool, strt_stp_text_box))
-        auto_button.grid(row=0, column=2, sticky='ew')
-
-        apply_button = tk.Button(self.display_frame, text="Apply Macro Settings", command=lambda: self.apply_settings(strt_stp_text_box))
-        apply_button.grid(row=1, column=2, sticky='ew')
-
-        add_button = tk.Button(self.display_frame, text="Add Command", command=self.add_command)
-        add_button.grid(row=2, column=2, sticky='ew')
 
         load_text_box = tk.Entry(self.display_frame)
-        load_text_box.grid(row=1, column=4, sticky='ew')
+        load_text_box.grid(row=5, column=0, sticky='ew')
         load_text_box.insert(0, 'Name of Previously Saved Macro')
-        load_button = tk.Button(self.display_frame, text='Load Macro', command=lambda: self.load_macro(str(load_text_box.get())))
-        load_button.grid(row=1, column=3, sticky='ew')
+        load_button = tk.Button(self.display_frame, text='Load Macro', bg='DarkGoldenrod1' ,command=lambda: self.load_macro(str(load_text_box.get())))
+        load_button.grid(row=4, column=0, sticky='ew')
 
         save_text_box = tk.Entry(self.display_frame)
-        save_text_box.grid(row=0, column=4, sticky='ew')
+        save_text_box.grid(row=3, column=0, sticky='ew')
         save_text_box.insert(0, 'Name of Macro to Save')
-        save_button = tk.Button(self.display_frame, text='Save Macro', command=lambda: self.save_macro(str(save_text_box.get())))
-        save_button.grid(row=0, column=3, sticky='ew')
+        save_button = tk.Button(self.display_frame, text='Save Macro', bg='RosyBrown2', command=lambda: self.save_macro(str(save_text_box.get()), str(self.natural_lang_text_box.get("1.0", tk.END))))
+        save_button.grid(row=2, column=0, sticky='ew')
 
         instruct_button = tk.Button(self.display_frame, text='Help!!', bg='green', command=lambda: self.help())
-        instruct_button.grid(row=2, column=3, sticky='ew')
-
-        self.remove_command_button = tk.Button()
+        instruct_button.grid(row=6, column=0, sticky='ew')
 
         self.run_macro = False
 
-        self.text_boxes = [delay_text_box, strt_stp_text_box]
-        self.display_buttons = [auto_button, apply_button]
-        self.key_buttons = []
-        self.mouse_buttons = []
-        self.command_boxes = []
-        self.command_vars = []
+        self.start_key = 'z'
+  
         self.command_vals = []
         self.command_types = []
-        self.command_count = 0
-        self.command_row = 0
-        self.row_count = 2
-        self.column_count = 0
 
         self.display_frame.pack()
+
+    def letter_finder(self, content):
+        if 'up' in content:
+            return 'up'
+        elif 'down' in content:
+            return 'down'
+        elif 'right' in content:
+            return 'right'
+        elif 'left' in content:
+            return 'left'
+        elif 'esc' in content:
+            return 'esc'
+        elif 'tab' in content:
+            return 'tab'
+        elif 'l_shift' in content:
+            return 'l_shift'
+        elif 'r_shift' in content:
+            return 'r_shift'
+        elif 'l_control' in content:
+            return 'l_control'
+        elif 'r_control' in content:
+            return 'r_control'
+        elif 'backspace' in content:
+            return 'backspace'
+        elif 'enter' in content:
+            return 'enter'
+        elif 'l_alt' in content:
+            return 'l_alt'
+        elif 'space' in content:
+            return 'space'
+        else:
+            # Define the pattern to match single letters within the content
+            letters_pattern = re.compile(r'\b([a-zA-Z])\b')
+            letters = letters_pattern.findall(content)
+            return letters[0] 
+    
+
+
+    def update_nl(self, nl_commands):
+        brackets_pattern = re.compile(r'\[([^]]+)\]')
+        # Define the pattern to match integers and floats within the content
+        numbers_pattern = re.compile(r'\b(?:\d+\.\d+|\d+)\b')
+        
+        # Use finditer to get match objects with positions
+        matches = brackets_pattern.finditer(nl_commands)
+
+        for match in matches:
+            content = (match.group(1)).lower()  # Content within the brackets
+            start_position = match.start()  # Start position of the brackets
+            end_position = match.end()  # End position of the brackets
+
+            if 'delay' in content:
+                # Search for numbers within the content
+                numbers = numbers_pattern.findall(content)
+
+                # Additional checks on the numbers
+                duration = float(numbers[0])
+
+                if ('minutes' in content) or ('minute' in content) or ('min' in content) or ('mins' in content):
+                    duration = duration * 60
+                elif ('hours' in content) or ('hour' in content) or ('hr' in content) or ('hrs' in content):
+                    duration = (duration * 60) * 60
+
+                self.command_types.append('delay')
+                self.command_vals.append(str(duration))
+
+            elif ('autoclick' in content) or ('ac' in content):
+                numbers = numbers_pattern.findall(content)
+                duration = float(numbers[0])
+                bRight = False
+
+                if ('right' in content) or ('r' in content):
+                    bRight = True
+
+                if 'minutes' in content:
+                    duration = duration * 60
+                elif 'hours' in content:
+                    duration = (duration * 60) * 60
+
+                self.autoclick(duration, bRight)
+
+                
+
+            elif 'press' in content:
+                if 'mouse' in content:
+                    if 'right' in content:
+                        self.command_types.append('mouse_press')
+                        self.command_vals.append(['press', 'right'])
+                    else:
+                        self.command_types.append('mouse_press')
+                        self.command_vals.append(['press', 'left'])
+                else:
+                    letter = self.letter_finder(content)
+                    self.command_types.append('key_text')
+                    self.command_vals.append(['press', letter])
+                    
+
+            elif 'release' in content:
+                if 'mouse' in content:
+                    if 'right' in content:
+                        self.command_types.append('mouse_release')
+                        self.command_vals.append(['release', 'right'])
+                        
+                    else:
+                        self.command_types.append('mouse_release')
+                        self.command_vals.append(['release', 'left'])
+                else:
+                    letter = self.letter_finder(content)
+                    self.command_types.append('key_text')
+                    self.command_vals.append(['release', letter])
+
+            elif 'click' in content:
+                if 'mouse' in content:
+                    if 'right' in content:
+                        self.command_types.append('mouse_click')
+                        self.command_vals.append(['click', 'right'])  
+                    else:
+                        self.command_types.append('mouse_click')
+                        self.command_vals.append(['click', 'left'])
+                else:
+                    letter = self.letter_finder(content)
+                    self.command_types.append('key_text')
+                    self.command_vals.append(['click' ,letter])
+
+            elif 'move' in content:
+                if 'mouse' in content:
+                    if 'left' in content:
+                        numbers = numbers_pattern.findall(content)
+                        number = numbers[0]
+                        self.command_types.append('mouse_text')
+                        self.command_vals.append(['left', number])
+                    elif 'right' in content:
+                        numbers = numbers_pattern.findall(content)
+                        number = numbers[0]
+                        self.command_types.append('mouse_text')
+                        self.command_vals.append(['right', number])
+                    elif 'up' in content:
+                        numbers = numbers_pattern.findall(content)
+                        number = numbers[0]
+                        self.command_types.append('mouse_text')
+                        self.command_vals.append(['up', number])
+
+                    elif 'down' in content:
+                        numbers = numbers_pattern.findall(content)
+                        number = numbers[0]
+                        self.command_types.append('mouse_text')
+                        self.command_vals.append(['down', number])
+
+                    elif 'to' in content:
+                        numbers = numbers_pattern.findall(content)
+                        numberx = numbers[0]
+                        numbery = numbers[1]
+                        self.command_types.append('mouse_text')
+                        self.command_vals.append(['to', numberx, numbery])
+
+            elif 'start_key' in content:
+                letter = self.letter_finder(content)
+                self.start_key = letter
+
+
+
+        self.apply_settings()
+
+
+                
         
     # Function to run the autoclicker instead of the macro
-    def autoclick(self, delay_text_box, click_bool, key_text_box):
+    def autoclick(self, delay, click_bool):
         
         try:
-            delay = float(delay_text_box.get())
-            if click_bool.get() == 0:
+            if click_bool == False:
                 button = Button.left
             else:
                 button = Button.right
 
-            if key_text_box.get() == '':
-                key = KeyCode(char='z')
-            else:
-                if len(key_text_box.get()) == 1:
-                    key = KeyCode(char=key_text_box.get())
-                else:
-                    key = KeyCode(char='z')
-
+            key = KeyCode(char=self.start_key)
 
             self.master.after(100, self.click_thread.run)
             self.click_thread.delay = delay
@@ -412,15 +545,9 @@ class MacroClickGUI:
             pass
         
     # Function to apply settings and turn the run_macro boolean true so that the macro will run instead of the autoclicker
-    def apply_settings(self, key_text_box):
+    def apply_settings(self):
         try:
-            if key_text_box.get() == '':
-                    key = KeyCode(char='z')
-            else:
-                if len(key_text_box.get()) == 1:
-                    key = KeyCode(char=key_text_box.get())
-                else:
-                    key = KeyCode(char='z')
+            key = KeyCode(char=self.start_key)
             self.master.after(100, self.macro_thread.run)
             self.macro_thread.key = key
             self.macro_thread.command_types = self.command_types
@@ -446,214 +573,19 @@ class MacroClickGUI:
                     self.macro_thread.running = not self.macro_thread.running
             except:
                 pass
-            
-    # Function that adds the command section and buttons to add inputs   
-    def add_command(self):
-        if self.command_count == 0:
-            self.command_count += 1
-            self.row_count += 1
-        
-            remove_command_button = tk.Button(self.display_frame, text="Remove Command", command=lambda: self.remove_command(remove_command_button))
-            remove_command_button.grid(row=self.row_count, column=1, sticky='ew', pady=5)
 
-            consolidate_button = tk.Button(self.display_frame, text='Confirm Before Running Command', command=lambda: self.consolidate())
-            consolidate_button.grid(row=self.row_count, column=2, sticky='ew')
-
-            self.row_count += 1
-
-            add_delay_button = tk.Button(self.display_frame, text="Add Delay", command=lambda: self.add_delay_text_box(add_delay_button))
-            add_delay_button.grid(row=self.row_count, column=2, sticky='ew', pady=10)
-
-            self.row_count += 1
-
-            add_key_button = tk.Button(self.display_frame, text="Add Keyboard Input", command=lambda: self.add_key_text_box(add_delay_button))
-            add_key_button.grid(row=self.row_count, column=2, sticky='ew', pady=10)
-
-            self.row_count += 1
-
-            add_mouse_button = tk.Button(self.display_frame, text="Add Mouse Input", command=lambda: self.add_mouse_text_box(add_delay_button))
-            add_mouse_button.grid(row=self.row_count, column=2, sticky='ew', pady=10)
-
-            self.command_boxes.append([remove_command_button, add_delay_button, add_key_button, add_mouse_button, consolidate_button])
-            
-            self.display_frame.pack()
-        
-
-    # Function to destroy a the entire command section
-    def remove_command(self, remove_button):
-        for command_section in self.command_boxes:
-            if command_section[0] == remove_button:
-                self.row_count -= 4
-                if self.command_count > 0:
-                    self.command_count -= 1
-                for element in command_section:
-                    element.destroy()
-                self.command_boxes.remove(command_section)
-                self.command_row = 0
-                self.command_types.clear()
-                self.command_vars.clear()
-                self.command_vals.clear()
-                break
-            
-    # Function to add a text box for a delay to be entered
-    def add_delay_text_box(self, add_delay_button):
-        if self.command_row == 0:
-            self.command_row = add_delay_button.grid_info()['row']
-        
-        for command_section in self.command_boxes:
-            if command_section[1] == add_delay_button:
-                delay_text_box = tk.Entry(self.display_frame)
-                delay_text_box.grid(row=self.command_row, column=0, sticky='ew', pady=5)
-                delay_text_box.insert(0, "Delay in seconds")
-
-                command_section.append(delay_text_box)
-                self.command_types.append('delay')
-                self.command_vars.append(delay_text_box)
-                self.command_row += 1
-                break
-        self.display_frame.pack()
-
-
-    def radio_used(self, selection):
-        print(selection.get())
-
-    # Function that adds a key input section
-    def add_key_text_box(self, key_button):
-        if self.command_row == 0:
-            self.command_row = key_button.grid_info()['row']
-
-        selection = tk.IntVar()
-
-        for command_section in self.command_boxes:
-            if command_section[1] == key_button:
-                key_text_box = tk.Entry(self.display_frame)
-                key_text_box.grid(row=self.command_row, column=0, sticky='ew', pady=5)
-                key_text_box.insert(0, "Keyboard key")
-
-                key_press = tk.Radiobutton(self.display_frame, text="Press", variable=selection, value=1)
-                key_press.grid(row=self.command_row, column=1, sticky='w')
-
-                self.command_row += 1
-
-                key_release = tk.Radiobutton(self.display_frame, text="Release", variable=selection, value=2)
-                key_release.grid(row=self.command_row, column=1, sticky='w')
-
-                self.command_row += 1
-
-                key_click = tk.Radiobutton(self.display_frame, text="Click", variable=selection, value=3)
-                key_click.grid(row=self.command_row, column=1, sticky='w')
-                self.command_row += 1
-
-                command_section.append(key_text_box)
-                command_section.append(key_press)
-                command_section.append(key_release)
-                command_section.append(key_click)
-                self.command_types.append('key_text')
-                self.command_types.append('key_press')
-                self.command_types.append('key_release')
-                self.command_types.append('key_click')
-                self.command_vars.append(key_text_box)
-                self.command_vars.append(selection)
-                self.command_vars.append(selection)
-                self.command_vars.append(selection)
-                break
-        self.display_frame.pack()
-
-    # Function that adds a mouse input section
-    def add_mouse_text_box(self, mouse_button):
-        if self.command_row == 0:
-            self.command_row = mouse_button.grid_info()['row']
-        
-        press_var = tk.IntVar()
-        release_var = tk.IntVar()
-        click_var = tk.IntVar()
-        button_var = tk.IntVar()
-
-        
-
-
-        for command_section in self.command_boxes:
-            if command_section[1] == mouse_button:
-                mouse_button = tk.Checkbutton(self.display_frame, text="Right mouse button", variable=button_var)
-                mouse_button.grid(row=self.command_row, column=0)
-                
-                mouse_press = tk.Checkbutton(self.display_frame, text="Press", variable=press_var)
-                mouse_press.grid(row=self.command_row, column=1, sticky='w')
-
-                self.command_row += 1
-
-                mouse_text_box = tk.Entry(self.display_frame)
-                mouse_text_box.insert(0, "Type one: Right(pixels), Left(pixels), Up(pixels), Down(pixels), To(X_pixels, Y_pixels)")
-                mouse_text_box.grid(row=self.command_row, column=0)
-                
-
-                mouse_release = tk.Checkbutton(self.display_frame, text="Release", variable=release_var)
-                mouse_release.grid(row=self.command_row, column=1, sticky='w')
-
-                self.command_row += 1
-
-                mouse_click = tk.Checkbutton(self.display_frame, text="Click", variable=click_var)
-                mouse_click.grid(row=self.command_row, column=1, sticky='w')
-                self.command_row += 1
-
-
-                command_section.append(mouse_button)
-                command_section.append(mouse_press)
-                command_section.append(mouse_text_box)
-                command_section.append(mouse_release)
-                command_section.append(mouse_click)
-                self.command_types.append('mouse_button')
-                self.command_types.append('mouse_press')
-                self.command_types.append('mouse_text')
-                self.command_types.append('mouse_release')
-                self.command_types.append('mouse_click')
-                self.command_vars.append(button_var)
-                self.command_vars.append(press_var)
-                self.command_vars.append(mouse_text_box)
-                self.command_vars.append(release_var)
-                self.command_vars.append(click_var)
-                break
-        self.display_frame.pack()
-
-    # Function to get rid of the input gui but save the values
-    def consolidate(self):
-        self.command_boxes[0].reverse()
-        self.command_types.reverse()
-        self.command_vals.reverse()
-        self.command_vars.reverse()
-        i = 0
-        for element in range(len(self.command_boxes[0])):
-            if self.command_boxes[0][0] != self.command_boxes[0][-5]:
-                command_val = str(self.command_vars[i].get())
-                self.command_vals.insert(i, command_val)
-
-                self.command_boxes[0][0].destroy()
-                self.command_boxes[0].remove(self.command_boxes[0][0])
-                i += 1
-            else:
-                break
-            
-        self.command_boxes[0].reverse()
-        self.command_vals.reverse()
-        self.command_vars.reverse()
-        self.command_types.reverse()
-
-        self.command_count = 0
-        self.command_row = 0
+    
 
     # Function to save the current values of the inputs for the current macro
-    def save_macro(self, name_of_file):
+    def save_macro(self, name_of_file, text_of_box):
         try:
-            if not os.path.exists(name_of_file + '.csv'):
-                with open((name_of_file + '.csv'), 'w', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(self.command_types)
-                    writer.writerow(self.command_vals)
+            if not os.path.exists(name_of_file + '.txt'):
+                with open((name_of_file + '.txt'), 'w', newline='') as f:
+                    f.write(text_of_box)
+                    
             else:
-                with open((name_of_file + '.csv'), 'w', newline='') as f:
-                    writer = csv.writer(f)
-                    writer.writerow(self.command_types)
-                    writer.writerow(self.command_vals)
+                with open((name_of_file + '.txt'), 'w', newline='') as f:
+                    f.write(text_of_box)
             messagebox.showinfo("Saved", "Macro Saved!")
         except:
             messagebox.showwarning("Not Saved", "Make sure to type a name for the file!")
@@ -661,15 +593,11 @@ class MacroClickGUI:
     # Function to load previously saved macros
     def load_macro(self, name_of_file):
         try:
-            with open((name_of_file + '.csv'), 'r') as f:
-                reader = csv.reader(f)
-                row_list = list(reader)
-
-                self.command_types = row_list[0]
-                self.command_vals = row_list[1]
-            print(self.command_types)
-            print(self.command_vals)
+            with open((name_of_file + '.txt'), 'r') as f:
+                content = f.read()
             messagebox.showinfo("Loaded", "Macro Loaded!")
+            self.natural_lang_text_box.delete("1.0", tk.END)
+            self.natural_lang_text_box.insert("1.0", content)
 
         except:
             messagebox.showwarning("Not Loaded", "Make sure to file exists!")
@@ -677,16 +605,14 @@ class MacroClickGUI:
     # Function to display a help message box
     def help(self):
         messagebox.showinfo("Help", """How to use: \n
-        1. You can just run the autoclicker by entering a delay between clicks and pressing the Autoclick button then the key to start and stop the autoclicker is defaulted to z. You can specify a different key to start and stop it if you want.
-        2. When you add a command to be able to run it by pressing your specified key. You must click Confirm Before Running Command and then click Apply Macro Settings. Then the macro will be able to be activated by your specified key.
-        3. When you hit Confirm Before Running Command it will make the commands you entered disappear don't worry the commands are stored within the program until you exit out. If you wish to save your macro type in a name without special characters and hit Save Macro. Macros can be loaded as long as you know know the name of the file which you saved before.
-        4. When adding a delay, key input, or mouse input after you've already confirmed the commands it will be added to the end of your macro this works with loaded macros as well.
-        5. Clicking on Remove Command will get rid of your current entered macro or loaded macro.
-        6. My recommendation is if your are creating a large macro to save after every few inputs you add.
-        7. If you have a really large macro running and you press the start/stop key the macro will stop after it has completely run through.
-        8. If your macro isn't working the way you want make sure to add delays in between key and mouse inputs.
-        9. Seriously even a short delay in between inputs could fix your macro. The Delays are in seconds and you can do decimals for the delays too so 0.001, 0.5, 1.25, etc.
-        10. Enjoy!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        0. [start_key z] start key must come first if using
+        1. [autoclick 1] autoclick every second
+        2. [delay 1] [delay 1 second] [delay 1 minute] [delay 1 hour] delays are defaulted to seconds.
+        3. [click a] [click mouse] [click mouse right] [click tab] etc.
+        4. [press a] [press mouse] [press mouse right] [press l_ctrl] etc.
+        5. [release a] [release mouse] [release mouse right] [release enter] etc.
+        6. [move mouse left 100 pixels] [move mouse right 100] [move mouse to 500 , 500]
+        7. Enjoy!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         https://github.com/PurifiedBananaWater/Macro-Click""")
 
 # Function to make sure the entire program is exited on close
