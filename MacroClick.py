@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import filedialog
 import time
 import ctypes
 import keyboard
-import csv
-import os
+from pathlib import Path
 import re
 from sys import exit
 from pynput.mouse import Button, Controller
@@ -163,33 +163,6 @@ class Input(ctypes.Structure):
 
 class MacroClickGUI:
 
-    class AutoClicker:
-        def __init__(self, delay, button, key, master):
-            self.master = master
-            self.delay = delay
-            self.button = button
-            self.key = key
-            self.running = False
-            self.mouse = Controller()
-
-        def start_clicking(self):
-            self.running = True
-
-        def stop_clicking(self):
-            self.running = False
-            
-        def run(self):
-            try:
-                if self.running:
-                    self.mouse.click(self.button)
-                    time.sleep(self.delay)
-                    self.master.after(1, self.run)
-
-                else:
-                    self.master.after(1, self.run)
-            except:
-                self.master.after(1, self.run)
-
     class MacroExecuter:
         def __init__(self, key, command_types, command_vals, master):
             self.master = master
@@ -319,7 +292,6 @@ class MacroClickGUI:
  
     # Initialize gui and variables
     def __init__(self, master):
-        self.click_thread = MacroClickGUI.AutoClicker(0, Button.left, KeyCode(char='z'), master)
         self.macro_thread = MacroClickGUI.MacroExecuter(KeyCode(char='z'), command_types=['delay'], command_vals=['0.001'], master=master)
         self.master = master
         
@@ -333,18 +305,10 @@ class MacroClickGUI:
         nl_update_button = tk.Button(self.display_frame, text="Update Command", bg='steelblue1', command=lambda: self.update_nl(str(self.natural_lang_text_box.get("1.0", tk.END))))
         nl_update_button.grid(row=1, column=0, sticky='n')
 
-
-
-        load_text_box = tk.Entry(self.display_frame)
-        load_text_box.grid(row=5, column=0, sticky='ew')
-        load_text_box.insert(0, 'Name of Previously Saved Macro')
-        load_button = tk.Button(self.display_frame, text='Load Macro', bg='DarkGoldenrod1' ,command=lambda: self.load_macro(str(load_text_box.get())))
+        load_button = tk.Button(self.display_frame, text='Load Macro', bg='DarkGoldenrod1' ,command=lambda: self.load_macro())
         load_button.grid(row=4, column=0, sticky='ew')
 
-        save_text_box = tk.Entry(self.display_frame)
-        save_text_box.grid(row=3, column=0, sticky='ew')
-        save_text_box.insert(0, 'Name of Macro to Save')
-        save_button = tk.Button(self.display_frame, text='Save Macro', bg='RosyBrown2', command=lambda: self.save_macro(str(save_text_box.get()), str(self.natural_lang_text_box.get("1.0", tk.END))))
+        save_button = tk.Button(self.display_frame, text='Save Macro', bg='RosyBrown2', command=lambda: self.save_macro(str(self.natural_lang_text_box.get("1.0", tk.END))))
         save_button.grid(row=2, column=0, sticky='ew')
 
         instruct_button = tk.Button(self.display_frame, text='Help!!', bg='green', command=lambda: self.help())
@@ -406,8 +370,6 @@ class MacroClickGUI:
 
         for match in matches:
             content = (match.group(1)).lower()  # Content within the brackets
-            start_position = match.start()  # Start position of the brackets
-            end_position = match.end()  # End position of the brackets
 
             if 'delay' in content:
                 # Search for numbers within the content
@@ -427,19 +389,11 @@ class MacroClickGUI:
             elif ('autoclick' in content) or ('ac' in content):
                 numbers = numbers_pattern.findall(content)
                 duration = float(numbers[0])
-                bRight = False
 
-                if ('right' in content) or ('r' in content):
-                    bRight = True
-
-                if 'minutes' in content:
-                    duration = duration * 60
-                elif 'hours' in content:
-                    duration = (duration * 60) * 60
-
-                self.autoclick(duration, bRight)
-
-                
+                self.command_types.append('mouse_click')
+                self.command_vals.append(['click', 'left'])
+                self.command_types.append('delay')
+                self.command_vals.append(str(duration))
 
             elif 'press' in content:
                 if 'mouse' in content:
@@ -520,29 +474,6 @@ class MacroClickGUI:
 
 
         self.apply_settings()
-
-
-                
-        
-    # Function to run the autoclicker instead of the macro
-    def autoclick(self, delay, click_bool):
-        
-        try:
-            if click_bool == False:
-                button = Button.left
-            else:
-                button = Button.right
-
-            key = KeyCode(char=self.start_key)
-
-            self.master.after(100, self.click_thread.run)
-            self.click_thread.delay = delay
-            self.click_thread.button = button
-            self.click_thread.key = key
-            self.run_macro = False
-
-        except:
-            pass
         
     # Function to apply settings and turn the run_macro boolean true so that the macro will run instead of the autoclicker
     def apply_settings(self):
@@ -563,9 +494,6 @@ class MacroClickGUI:
             if self.run_macro:
                 if key == self.macro_thread.key:
                     self.macro_thread.running = not self.macro_thread.running
-            else:
-                if key == self.click_thread.key:
-                    self.click_thread.running = not self.click_thread.running
             
         except:
             try:
@@ -577,30 +505,47 @@ class MacroClickGUI:
     
 
     # Function to save the current values of the inputs for the current macro
-    def save_macro(self, name_of_file, text_of_box):
-        try:
-            if not os.path.exists(name_of_file + '.txt'):
-                with open((name_of_file + '.txt'), 'w', newline='') as f:
-                    f.write(text_of_box)
-                    
-            else:
-                with open((name_of_file + '.txt'), 'w', newline='') as f:
-                    f.write(text_of_box)
-            messagebox.showinfo("Saved", "Macro Saved!")
-        except:
-            messagebox.showwarning("Not Saved", "Make sure to type a name for the file!")
+    def save_macro(self, text_of_box):
+        filename = filedialog.asksaveasfilename(
+            initialdir=".",
+            initialfile="macro.txt",
+            title="Save macro as", 
+            filetypes=(("Text files", "*.txt"), ("all files", "*.*"))  
+        )
+
+        if filename:
+            # Append .txt if needed
+            filename = Path(filename)
+            if filename.suffix != ".txt":
+                filename = filename.with_suffix(".txt")
+
+            try:
+                with open(filename, 'w') as f:
+                    f.write(text_of_box)   
+                messagebox.showinfo("Saved", "Macro Saved!")
+
+            except:
+                messagebox.showwarning("Not Saved", "Error saving macro!")
 
     # Function to load previously saved macros
-    def load_macro(self, name_of_file):
-        try:
-            with open((name_of_file + '.txt'), 'r') as f:
-                content = f.read()
-            messagebox.showinfo("Loaded", "Macro Loaded!")
-            self.natural_lang_text_box.delete("1.0", tk.END)
-            self.natural_lang_text_box.insert("1.0", content)
+    def load_macro(self):
+        filename = filedialog.askopenfilename(
+        initialdir=".", 
+        title="Select macro file",
+        filetypes=(("Text files", "*.txt"), ("all files", "*.*"))
+        )
+        if filename:
+            try:
+                with open(filename, 'r') as f:
+                    content = f.read()
+                messagebox.showinfo("Loaded", "Macro Loaded!")
+                self.natural_lang_text_box.delete("1.0", tk.END)
+                self.natural_lang_text_box.insert("1.0", content)
+                self.macro_thread.running = False
+                self.update_nl(str(self.natural_lang_text_box.get("1.0", tk.END)))
 
-        except:
-            messagebox.showwarning("Not Loaded", "Make sure to file exists!")
+            except:
+                messagebox.showwarning("Not Loaded", "Error loading macro!")
 
     # Function to display a help message box
     def help(self):
