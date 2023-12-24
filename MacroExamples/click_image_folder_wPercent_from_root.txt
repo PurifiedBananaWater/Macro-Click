@@ -1,2 +1,2 @@
-[start_key_x] [delay 1] [click_image folder(image_templates) image(Test3) percent(90)]
+[start_key x] [delay 1] [click_image folder(image_templates) image(Test3) percent(90)]
 

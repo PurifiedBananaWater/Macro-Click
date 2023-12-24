@@ -1,2 +1,2 @@
-[start_key_x] [delay 1] [click_color folder(colors) image(blue)] [delay 1]
+[start_key x] [delay 1] [click_color folder(colors) image(blue)] [delay 1]
 

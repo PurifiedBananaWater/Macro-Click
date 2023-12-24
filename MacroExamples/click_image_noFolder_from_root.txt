@@ -1,2 +1,2 @@
-[start_key_x] [delay 1] [click_image image(test1)]
+[start_key x] [delay 1] [click_image image(test1)]
 

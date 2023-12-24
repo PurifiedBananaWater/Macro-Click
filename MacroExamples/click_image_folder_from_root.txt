@@ -1,1 +1,1 @@
-[start_key_x] [delay 1] [click_image folder(image_templates) image(test1)]
+[start_key x] [delay 1] [click_image folder(image_templates) image(test1)]

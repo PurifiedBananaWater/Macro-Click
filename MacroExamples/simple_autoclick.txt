@@ -1,2 +1,2 @@
-[start_key_x] [autoclick 1]
+[start_key x] [autoclick 1]
 
