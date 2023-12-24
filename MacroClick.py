@@ -3,6 +3,7 @@ from tkinter import messagebox
 from tkinter import filedialog
 import time
 import ctypes
+import win32api
 import keyboard
 from pathlib import Path
 import re
@@ -10,6 +11,7 @@ from sys import exit
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
 import pydirectinput
+from ImageSnipper import ImageSnipper
 # Why import libraries that do basically the same thing?
 # From my testing this combination has worked best for the games I tested it on.
 
@@ -166,11 +168,40 @@ class MacroClickGUI:
     class MacroExecuter:
         def __init__(self, key, command_types, command_vals, master):
             self.master = master
+            self.image_snipper = ImageSnipper(self.master)
             self.key = key
             self.command_types = command_types
             self.command_vals = command_vals
             self.running = False
             self.mouse = Controller()
+
+            self.PROCESS_PER_MONITOR_DPI_AWARE = 2
+            self.MDT_EFFECTIVE_DPI = 0
+            self.x_scale, self.y_scale = self.get_dpi_scale()
+
+
+        ## So depending on what you have your screen scaling set to, that can mess with
+        ## moving the mouse to the correct cordinates.
+        ## Here is a function that get's the scaling for windows I just found it easier to
+        ## set my screen scaling to 100% so I haven't tried implementing the function anywhere
+        def get_dpi_scale(self):
+            shcore = ctypes.windll.shcore
+            monitors = win32api.EnumDisplayMonitors()
+            hresult = shcore.SetProcessDpiAwareness(self.PROCESS_PER_MONITOR_DPI_AWARE)
+            assert hresult == 0
+            dpiX = ctypes.c_uint()
+            dpiY = ctypes.c_uint()
+            for i, monitor in enumerate(monitors):
+                shcore.GetDpiForMonitor(
+                    monitor[0].handle,
+                    self.MDT_EFFECTIVE_DPI,
+                    ctypes.byref(dpiX),
+                    ctypes.byref(dpiY)
+                )
+                x_scale = dpiX.value / 96
+                y_scale = dpiY.value / 96
+
+                return x_scale, y_scale
 
         def start_macro(self):
             self.running = True
@@ -254,16 +285,16 @@ class MacroClickGUI:
                         elif elem == 'mouse_text':
                             move_mouse = self.command_vals[i]
                             if move_mouse[0] == 'up':
-                                pixels = - int(move_mouse[1])
+                                pixels = (- int(move_mouse[1]))
                                 mouse_mover.move_mouse_up(pixels)
                             elif move_mouse[0] == 'down':
-                                pixels = int(move_mouse[1])
+                                pixels = (int(move_mouse[1]))
                                 mouse_mover.move_mouse_up(pixels)
                             elif move_mouse[0] == 'left':
-                                pixels = - int(move_mouse[1])
+                                pixels = (- int(move_mouse[1]))
                                 mouse_mover.move_mouse_right(pixels)
                             elif move_mouse[0] == 'right':
-                                pixels = int(move_mouse[1])
+                                pixels = (int(move_mouse[1]))
                                 mouse_mover.move_mouse_right(pixels)
                             elif move_mouse[0] == 'to':
                                 index = 0
@@ -271,9 +302,61 @@ class MacroClickGUI:
                                     if l == ',':
                                         break
                                     index += 1
-                                pixels_x = int(move_mouse[1])
-                                pixels_y = int(move_mouse[2])
+                                pixels_x = (int(move_mouse[1]))
+                                pixels_y = (int(move_mouse[2]))
+                                
                                 mouse_mover.move_mouse_to(pixels_x, pixels_y)
+
+                        elif elem == 'click_image':
+                            folder = self.command_vals[i][0]
+                            image = self.command_vals[i][1]
+                            if self.command_vals[i][2] != None:
+                                match_pct = float(self.command_vals[i][2])
+                            else:
+                                match_pct = 0.8
+
+                            found, pos = self.image_snipper.find_template(folder, image, match_pct)
+                            if found:
+                                pixels_x = (int(pos[0]))
+                                pixels_y = (int(pos[1]))
+                                    
+                                mouse_mover.move_mouse_to(pixels_x, pixels_y)
+                                time.sleep(0.001)
+                                self.mouse.click(Button.left)
+
+                        elif elem == 'click_images':
+                            folder = self.command_vals[i][0]
+                    
+                            if self.command_vals[i][1] != None:
+                                match_pct = float(self.command_vals[i][1])
+                            else:
+                                match_pct = 0.8
+
+                            images_pos = self.image_snipper.find_templates_in_folder(folder, match_pct)
+                            for pos in images_pos:
+                                pixels_x = (int(pos[0]))
+                                pixels_y = (int(pos[1]))
+                                    
+                                mouse_mover.move_mouse_to(pixels_x, pixels_y)
+                                time.sleep(0.001)
+                                self.mouse.click(Button.left)
+
+                        elif elem == 'click_color':
+                            folder, image, smallest_size = self.command_vals[i]
+
+                            found, centers = self.image_snipper.detect_color(folder, image, smallest_size)
+                            
+                            if found:
+                                for center in centers:
+                                    # Get center of first bounding rect
+                                    x = center[0]
+                                    y = center[1]
+                                    mouse_mover.move_mouse_to(x, y)
+                                    time.sleep(0.001)
+                                    self.mouse.click(Button.left)
+
+                            else:
+                                pass
 
                         else:
                             pass
@@ -293,7 +376,9 @@ class MacroClickGUI:
     # Initialize gui and variables
     def __init__(self, master):
         self.macro_thread = MacroClickGUI.MacroExecuter(KeyCode(char='z'), command_types=['delay'], command_vals=['0.001'], master=master)
+        self.image_snipper = self.macro_thread.image_snipper
         self.master = master
+        
         
         self.master.title("Macro Click")
 
@@ -311,17 +396,21 @@ class MacroClickGUI:
         save_button = tk.Button(self.display_frame, text='Save Macro', bg='RosyBrown2', command=lambda: self.save_macro(str(self.natural_lang_text_box.get("1.0", tk.END))))
         save_button.grid(row=2, column=0, sticky='ew')
 
+        snip_button = tk.Button(self.display_frame, text='Snip Image', bg='SpringGreen1', command=self.image_snipper.snip_image) 
+        snip_button.grid(row=5, column=0, sticky='ew')
+
         instruct_button = tk.Button(self.display_frame, text='Help!!', bg='green', command=lambda: self.help())
         instruct_button.grid(row=6, column=0, sticky='ew')
 
         self.run_macro = False
 
-        self.start_key = 'z'
+        self.start_key = 'x'
   
         self.command_vals = []
         self.command_types = []
 
         self.display_frame.pack()
+            
 
     def letter_finder(self, content):
         if 'up' in content:
@@ -357,10 +446,21 @@ class MacroClickGUI:
             letters_pattern = re.compile(r'\b([a-zA-Z])\b')
             letters = letters_pattern.findall(content)
             return letters[0] 
+        
+    def get_bracket_content(self, text, key):
+        pattern = r'(\w+)\((.+?)\)' 
+        matches = re.finditer(pattern, text)
+
+        for match in matches:
+            tag = match.group(1)
+            content = match.group(2)
+            if tag == key:
+                return content
+
     
-
-
     def update_nl(self, nl_commands):
+        self.command_vals = []
+        self.command_types = []
         brackets_pattern = re.compile(r'\[([^]]+)\]')
         # Define the pattern to match integers and floats within the content
         numbers_pattern = re.compile(r'\b(?:\d+\.\d+|\d+)\b')
@@ -383,15 +483,6 @@ class MacroClickGUI:
                 elif ('hours' in content) or ('hour' in content) or ('hr' in content) or ('hrs' in content):
                     duration = (duration * 60) * 60
 
-                self.command_types.append('delay')
-                self.command_vals.append(str(duration))
-
-            elif ('autoclick' in content) or ('ac' in content):
-                numbers = numbers_pattern.findall(content)
-                duration = float(numbers[0])
-
-                self.command_types.append('mouse_click')
-                self.command_vals.append(['click', 'left'])
                 self.command_types.append('delay')
                 self.command_vals.append(str(duration))
 
@@ -422,6 +513,55 @@ class MacroClickGUI:
                     letter = self.letter_finder(content)
                     self.command_types.append('key_text')
                     self.command_vals.append(['release', letter])
+
+
+            elif 'click_images' in content:
+                folder = self.get_bracket_content(content, 'folder')
+                match_pct = float(self.get_bracket_content(content, 'percent')) / 100.0
+                
+                self.command_types.append('click_images')
+                self.command_vals.append([folder, match_pct])
+
+            elif 'click_image' in content:
+                folder = self.get_bracket_content(content, 'folder') 
+                if not folder:
+                    folder = ""
+                image = self.get_bracket_content(content, 'image')
+                match_pct = self.get_bracket_content(content, 'percent')
+                if match_pct:
+                    match_pct = float(match_pct) / 100
+
+                else:
+                    match_pct = 0.8
+
+                self.command_types.append('click_image')
+                self.command_vals.append([folder, image, match_pct])
+
+            elif 'click_color' in content:
+                folder = self.get_bracket_content(content, 'folder') 
+                image_file = self.get_bracket_content(content, 'image')
+                smallest_size = self.get_bracket_content(content, 'size')
+                if smallest_size:
+                    numbers = numbers_pattern.findall(smallest_size)
+                    numberx = int(numbers[0])
+                    numbery = int(numbers[1])
+                
+                    self.command_types.append('click_color')
+                    self.command_vals.append([folder, image_file, (numberx, numbery)])
+                
+                else:
+                    self.command_types.append('click_color')
+                    self.command_vals.append([folder, image_file, (0, 0)])
+
+            elif ('autoclick' in content) or ('ac' in content):
+                numbers = numbers_pattern.findall(content)
+                duration = float(numbers[0])
+
+                self.command_types.append('mouse_click')
+                self.command_vals.append(['click', 'left'])
+                self.command_types.append('delay')
+                self.command_vals.append(str(duration))
+                    
 
             elif 'click' in content:
                 if 'mouse' in content:
@@ -467,9 +607,15 @@ class MacroClickGUI:
                         self.command_types.append('mouse_text')
                         self.command_vals.append(['to', numberx, numbery])
 
+            
+                    
             elif 'start_key' in content:
                 letter = self.letter_finder(content)
                 self.start_key = letter
+
+            
+
+            
 
 
 
@@ -557,7 +703,11 @@ class MacroClickGUI:
         4. [press a] [press mouse] [press mouse right] [press l_ctrl] etc.
         5. [release a] [release mouse] [release mouse right] [release enter] etc.
         6. [move mouse left 100 pixels] [move mouse right 100] [move mouse to 500 , 500]
-        7. Enjoy!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        7. [click_image folder(folder_name) image(image_name)] Do not need to add extension such as .jpg
+        8. [click_images folder(folder_name) percent(85)] percent can be used for percent to match before clicking.
+        9. [click_color folder(folder_name) image(to_get_avg_color_of)]
+        10.[click_color folder(folder_name) image(to_get_avg_color_of) size(25,25)] Don't click on detected color below that size
+        11. Enjoy!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         https://github.com/PurifiedBananaWater/Macro-Click""")
 
 # Function to make sure the entire program is exited on close

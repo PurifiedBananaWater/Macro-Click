@@ -1,0 +1,2 @@
+[start_key_x] [delay 1] [move mouse to(500,500)] 
+

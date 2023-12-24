@@ -1,0 +1,2 @@
+[start_key_x] [delay 1] [click_image folder(C:/Users/user/Documents/PythonPrograms/MacroClick/image_templates) image(Test3)]
+
