@@ -375,7 +375,7 @@ class MacroClickGUI:
  
     # Initialize gui and variables
     def __init__(self, master):
-        self.macro_thread = MacroClickGUI.MacroExecuter(KeyCode(char='z'), command_types=['delay'], command_vals=['0.001'], master=master)
+        self.macro_thread = MacroClickGUI.MacroExecuter(KeyCode(char='x'), command_types=['delay'], command_vals=['0.001'], master=master)
         self.image_snipper = self.macro_thread.image_snipper
         self.master = master
         
@@ -385,7 +385,7 @@ class MacroClickGUI:
         self.display_frame = tk.Frame(self.master)
 
         self.natural_lang_text_box = tk.Text(self.display_frame)
-        self.natural_lang_text_box.insert("1.0", "[start_key z] [delay 1] [click mouse]")
+        self.natural_lang_text_box.insert("1.0", "[start_key x] [delay 1] [click mouse]")
         self.natural_lang_text_box.grid(row=0, column=0)
         nl_update_button = tk.Button(self.display_frame, text="Update Command", bg='steelblue1', command=lambda: self.update_nl(str(self.natural_lang_text_box.get("1.0", tk.END))))
         nl_update_button.grid(row=1, column=0, sticky='n')
