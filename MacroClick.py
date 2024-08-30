@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import filedialog
-import time
 import ctypes
 import win32api
 import keyboard
@@ -11,9 +10,13 @@ from sys import exit
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
 import pydirectinput
+import threading
+from threading import Event
 from ImageSnipper import ImageSnipper
 # Why import libraries that do basically the same thing?
 # From my testing this combination has worked best for the games I tested it on.
+
+
 
 SendInput = ctypes.windll.user32.SendInput
 
@@ -28,7 +31,7 @@ class MouseMover:
         pydirectinput.moveTo(x, y)
 
 class Keyboard:
-    def __init__(self):
+    def __init__(self, stop_event):
         # Key Scan Codes
         # Even though they aren't really used too much in this code manually
         # I want to keep them here as a just in case the keyboard library isn't perfect
@@ -103,6 +106,8 @@ class Keyboard:
         self.DOWN = 0xD0
         self.ESC = 0x01
 
+        self.stop = stop_event
+
 
     def press_key(self, hexKeyCode):
         extra = ctypes.c_ulong(0)
@@ -122,9 +127,9 @@ class Keyboard:
 
     def click_key(self, hexKeyCode):
         self.press_key(hexKeyCode)
-        time.sleep(0.01)
+        self.stop.wait(0.01)
         self.release_key(hexKeyCode)
-        time.sleep(0.01)
+        self.stop.wait(0.01)
 
 # I have had this code on my computer for so long I don't rmember the original author of these classes.
 # So the classes below here up until MacroClickGUI class are not my original creations.
@@ -166,7 +171,7 @@ class Input(ctypes.Structure):
 class MacroClickGUI:
 
     class MacroExecuter:
-        def __init__(self, key, command_types, command_vals, master):
+        def __init__(self, stop_event, key, command_types, command_vals, master):
             self.master = master
             self.image_snipper = ImageSnipper(self.master)
             self.key = key
@@ -174,6 +179,8 @@ class MacroClickGUI:
             self.command_vals = command_vals
             self.running = False
             self.mouse = Controller()
+
+            self.stop = stop_event
 
             self.PROCESS_PER_MONITOR_DPI_AWARE = 2
             self.MDT_EFFECTIVE_DPI = 0
@@ -203,22 +210,32 @@ class MacroClickGUI:
 
                 return x_scale, y_scale
 
-        def start_macro(self):
-            self.running = True
+        def toggle_macro(self):
+            if self.running:
+                self.stop_macro()
+                return
+            else:
+                self.running = True
+                self.thread = threading.Thread(target=self.run)
+                self.thread.start()
 
         def stop_macro(self):
             self.running = False
+            self.stop.set()
+            if hasattr(self, 'thread'):
+                self.thread.join()
+            self.stop.clear()
             
         def run(self):
             try:
-                if self.running:
-                    keyb = Keyboard()
+                while self.running and not self.stop.is_set():
+                    keyb = Keyboard(self.stop)
                     mouse_mover = MouseMover()
                     i = 0
                     for elem in self.command_types:
                         if elem == 'delay':
                             delay = float(self.command_vals[i])
-                            time.sleep(delay)
+                            self.stop.wait(delay)
                         elif elem == 'key_text':
                             key = str(self.command_vals[i][1])
                             if len(key) > 1:
@@ -256,10 +273,10 @@ class MacroClickGUI:
                                 key_hexcode = keyboard.key_to_scan_codes(key)[0]
                             if self.command_vals[i][0] == 'press': # Press
                                 keyb.press_key(key_hexcode)
-                                time.sleep(0.0001)
+                                self.stop.wait(0.0001)
                             elif self.command_vals[i][0] == 'release': # Release
                                 keyb.release_key(key_hexcode)
-                                time.sleep(0.0001)
+                                self.stop.wait(0.0001)
                             elif self.command_vals[i][0] == 'click': # Click
                                 keyb.click_key(key_hexcode)
                             
@@ -321,7 +338,7 @@ class MacroClickGUI:
                                 pixels_y = (int(pos[1]))
                                     
                                 mouse_mover.move_mouse_to(pixels_x, pixels_y)
-                                time.sleep(0.001)
+                                self.stop.wait(0.001)
                                 self.mouse.click(Button.left)
 
                         elif elem == 'click_images':
@@ -338,7 +355,7 @@ class MacroClickGUI:
                                 pixels_y = (int(pos[1]))
                                     
                                 mouse_mover.move_mouse_to(pixels_x, pixels_y)
-                                time.sleep(0.001)
+                                self.stop.wait(0.001)
                                 self.mouse.click(Button.left)
 
                         elif elem == 'click_color':
@@ -352,11 +369,13 @@ class MacroClickGUI:
                                     x = center[0]
                                     y = center[1]
                                     mouse_mover.move_mouse_to(x, y)
-                                    time.sleep(0.001)
+                                    self.stop.wait(0.001)
                                     self.mouse.click(Button.left)
 
                             else:
                                 pass
+
+                            
 
                         else:
                             pass
@@ -365,17 +384,18 @@ class MacroClickGUI:
                         
 
 
-                    self.master.after(1, self.run)
-                    
-                else:
-                    self.master.after(1, self.run)
-            except:
-                self.master.after(1, self.run)
+                    self.stop.wait(0.001)  # Small delay to prevent CPU hogging
+
+                self.running = False
+            except Exception as e:
+                print(e)
+                self.stop.wait(0.001)  # Small delay to prevent CPU hogging
 
  
     # Initialize gui and variables
     def __init__(self, master):
-        self.macro_thread = MacroClickGUI.MacroExecuter(KeyCode(char='x'), command_types=['delay'], command_vals=['0.001'], master=master)
+        self.stop = Event()
+        self.macro_thread = MacroClickGUI.MacroExecuter(stop_event=self.stop, key=KeyCode(char='z'), command_types=['delay'], command_vals=['0.001'], master=master)
         self.image_snipper = self.macro_thread.image_snipper
         self.master = master
         
@@ -425,21 +445,21 @@ class MacroClickGUI:
             return 'esc'
         elif 'tab' in content:
             return 'tab'
-        elif 'l_shift' in content:
+        elif 'l_shift' in content or 'shift' in content:
             return 'l_shift'
         elif 'r_shift' in content:
             return 'r_shift'
-        elif 'l_control' in content:
+        elif 'l_control' in content or 'control' in content or 'l_ctrl' in content or 'ctrl' in content:
             return 'l_control'
         elif 'r_control' in content:
             return 'r_control'
-        elif 'backspace' in content:
+        elif 'backspace' in content or 'bksp' in content:
             return 'backspace'
-        elif 'enter' in content:
+        elif 'enter' in content or 'return' in content or 'ent' in content or 'rtn' in content:
             return 'enter'
-        elif 'l_alt' in content:
+        elif 'l_alt' in content or 'alt' in content:
             return 'l_alt'
-        elif 'space' in content:
+        elif 'space' in content or 'spc' in content:
             return 'space'
         else:
             # Define the pattern to match single letters within the content
@@ -625,7 +645,7 @@ class MacroClickGUI:
     def apply_settings(self):
         try:
             key = KeyCode(char=self.start_key)
-            self.master.after(100, self.macro_thread.run)
+            #self.master.after(100, self.macro_thread.run)
             self.macro_thread.key = key
             self.macro_thread.command_types = self.command_types
             self.macro_thread.command_vals = self.command_vals
@@ -639,12 +659,14 @@ class MacroClickGUI:
         try:
             if self.run_macro:
                 if key == self.macro_thread.key:
-                    self.macro_thread.running = not self.macro_thread.running
+                    self.macro_thread.toggle_macro()
+                
+
             
         except:
             try:
                 if key == self.macro_thread.key:
-                    self.macro_thread.running = not self.macro_thread.running
+                    self.macro_thread.toggle_macro()
             except:
                 pass
 
@@ -712,6 +734,8 @@ class MacroClickGUI:
 
 # Function to make sure the entire program is exited on close
 def quit_after_window_closed():
+    if hasattr(program.macro_thread, 'thread'):
+        program.macro_thread.stop_macro()
     exit()
 
 
